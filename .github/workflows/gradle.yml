@@ -1,0 +1,113 @@
+name: Build with Gradle
+
+on:
+  workflow_dispatch:
+  push:
+
+env:
+  GRADLE_OPTS: '-Dorg.gradle.jvmargs=-Xmx4096M -Dorg.gradle.daemon=false'
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - name: Checkout development
+      uses: actions/checkout@v2
+      with:
+        ref: 'development'
+
+    - name: Set up JDK 8
+      uses: actions/setup-java@v1
+      with:
+        java-version: 8
+
+    - name: Build
+      run: ./gradlew -i --stacktrace lintSnapshotBasicRelease testSnapshotBasicDebugUnitTest spawnSnapshotBasicArchives
+
+    - name: Upload debug aar
+      uses: actions/upload-artifact@v2
+      with:
+        name: androidlibrary_lib-snapshot-basic-debug.aar
+        path: androidlibrary_lib/build/outputs/aar/androidlibrary_lib-snapshot-basic-debug.aar
+        if-no-files-found: error
+
+    - name: Upload release aar
+      uses: actions/upload-artifact@v2
+      with:
+        name: androidlibrary_lib-snapshot-basic-release.aar
+        path: androidlibrary_lib/build/outputs/aar/androidlibrary_lib-snapshot-basic-release.aar
+        if-no-files-found: error
+
+    - name: Upload lint results
+      uses: actions/upload-artifact@v2
+      with:
+        name: lint-results
+        path: androidlibrary_lib/build/reports/lint-results-*
+        if-no-files-found: error
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v2
+      with:
+        name: test-results
+        path: androidlibrary_lib/build/reports/tests
+        if-no-files-found: error
+
+    - name: Update test results (XML)
+      uses: actions/upload-artifact@v2
+      with:
+        name: test-results-xml
+        path: androidlibrary_lib/build/test-results
+        if-no-files-found: error
+
+  connected-test:
+    needs: build
+    runs-on: macos-10.15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [default, google_apis]
+        api: [27, 28]
+
+    steps:
+    - name: Checkout development
+      uses: actions/checkout@v2
+      with:
+        ref: 'development'
+
+    - name: Set up JDK 8
+      uses: actions/setup-java@v1
+      with:
+        java-version: 8
+
+    - name: Run connectedSnapshotBasicDebugAndroidTest
+      uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: ${{ matrix.api }}
+        target: ${{ matrix.abi }}
+        sdcard-path-or-size: 1024M
+        script: |
+          adb logcat > logcat.log 2>&1 &
+          ./gradlew -i --stacktrace connectedSnapshotBasicDebugAndroidTest
+
+    - name: Upload androidTest results
+      uses: actions/upload-artifact@v2
+      with:
+        name: androidTest-results-api${{ matrix.api }}-${{ matrix.abi }}
+        path: androidlibrary_lib/build/reports/androidTests
+        if-no-files-found: error
+
+    - name: Upload androidTest results (XML)
+      uses: actions/upload-artifact@v2
+      with:
+        name: androidTest-results-api${{ matrix.api }}-${{ matrix.abi }}-xml
+        path: androidlibrary_lib/build/outputs/androidTest-results
+        if-no-files-found: error
+
+    - name: Upload emulator logcat
+      uses: actions/upload-artifact@v2
+      with:
+        name: logcat.log-api${{ matrix.api }}-${{ matrix.abi }}
+        path: logcat.log
+        if-no-files-found: error

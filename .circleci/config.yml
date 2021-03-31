@@ -1,0 +1,14 @@
+version: 2.1
+
+orbs:
+  android: circleci/android@1.0
+
+workflows:
+  test:
+    jobs:
+      - android/run-ui-tests:
+          post-emulator-launch-assemble-command: ''
+          test-command: ./gradlew -i --stacktrace lintSnapshotBasicRelease testSnapshotBasicDebugUnitTest connectedSnapshotBasicDebugAndroidTest
+          system-image: system-images;android-27;google_apis;x86
+          save-gradle-cache: false
+          run-logcat: true

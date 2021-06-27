@@ -92,4 +92,8 @@ public class ColorRuleTest {
       Assert.assertTrue(cr1.equalsWithoutId(cr2));
    }
 
+   @Test
+   public void testFailure() {
+      Assert.assertTrue(false);
+   }
 }

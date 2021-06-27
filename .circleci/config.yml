@@ -1,14 +1,25 @@
 version: 2.1
 
-orbs:
-  android: circleci/android@1.0.3
+jobs:
+  build:
+    docker:
+      - image: circleci/node:12
+    steps:
+      - run:
+          name: Fetch test results
+          command: |
+            wget --show-progress -d --auth-no-challenge -O test-results.zip --user=linl33 --password=${GH_PAT}  https://api.github.com/repos/linl33/androidlibrary/actions/artifacts/70773940/zip
+            unzip test-results.zip
+            mkdir -p ~/test-results/junit
+            mv testSnapshotBasicDebugUnitTest/*.xml ~/test-results/junit
+            false
+          when: always
+      - store_test_results:
+          path: ~/test-results
+
 
 workflows:
-  test:
+  version: 2
+  fetch_and_show:
     jobs:
-      - android/run-ui-tests:
-          post-emulator-launch-assemble-command: ''
-          test-command: ./gradlew -i --stacktrace lintSnapshotBasicRelease testSnapshotBasicDebugUnitTest connectedSnapshotBasicDebugAndroidTest
-          system-image: system-images;android-27;google_apis;x86
-          save-gradle-cache: false
-          run-logcat: true
+      - build
